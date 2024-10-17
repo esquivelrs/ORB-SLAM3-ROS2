@@ -1,8 +1,35 @@
+# This is based on suchetanrs's project ORB-SLAM3-ROS2-Docker and GLtangzero fork ORB-SLAM3-ROS2-Docker-mono
+
+Not using Docker container:
+
+Verify `set(ENV{PYTHONPATH} "/opt/ros/humble/lib/python3.10/site-packages/")` in `CMakeLists.txt`
+
+And `set(ORB_SLAM3_ROOT_DIR "/home/orb/ORB_SLAM3"` in `orb_slam3_ros2_wrapper/CMakeModules/FindORB_SLAM3.cmake`
+
+Install Pangolin
+
+Install ORB-SLAM
+
+```
+cd ORB_SLAM3
+chmod +x build.sh
+./build.sh
+```
+
+goto to working_directory
+
+```
+colcon build --symlink-install
+source install/setup.bash
+```
+
+ ** some of the instructions in <https://github.com/Mechazo11/ros2_orb_slam3> may be needed like `$LD_LIBRARY_PATH` need to confirm this
+
 # This file is based on suchetanrs's project ORB-SLAM3-ROS2-Docker add a new mono work type
 
 After follow the main step below, try to running ```ros2 launch orb_slam3_ros2_wrapper mono```
 
-Because the mono type assume the depth based on the computer version so if you find the orbslam3 warning of "not initialized" please shake your camera! 
+Because the mono type assume the depth based on the computer version so if you find the orbslam3 warning of "not initialized" please shake your camera!
 
 If you have problems:
 
@@ -12,15 +39,12 @@ Try to check the comment first [here](https://github.com/suchetanrs/ORB-SLAM3-RO
 
 And of course it's welcome to report any problem!!
 
-
-
-
-
 # ORB-SLAM3 ROS2 Wrapper Docker
 
 This repository contains a dockerized comprehensive wrapper for ORB-SLAM3 on ROS 2 Humble for Ubuntu 22.04.
 
 ## Build status
+
 ![Humble Docker Build](https://github.com/suchetanrs/ORB-SLAM3-ROS2-Docker/actions/workflows/build-humble-image.yml/badge.svg)
 
 # Demo GIF
@@ -59,6 +83,7 @@ sudo chmod +x container_root/shell_scripts/docker_install.sh
 ## 5. Building the ORB-SLAM3 Wrapper
 
 Launch the container using steps in (4).
+
 ```bash
 cd /root/colcon_ws/
 colcon build --symlink-install
@@ -73,15 +98,15 @@ If you are inside the container, run the following:
 1. ```ros2 launch orb_slam3_ros2_wrapper unirobot.launch.py```
 3. You can adjust the initial co-ordinates of the robot along with its namespace in the ```unirobot.launch.py``` file.
 
-## Running this with a Gazebo Classic simulation.
+## Running this with a Gazebo Classic simulation
 
 1. Setup the ORB-SLAM3 ROS2 Docker using the steps above. Once you do (1) step in the ```Launching ORB-SLAM3``` section, you should see a window popup which is waiting for images. This is partially indicative of the setup correctly done.
 2. Setup the simulation by following the README [here](https://github.com/suchetanrs/gz-sim-environment)
 3. Once you are able to teleop the robot, you should be able to run ORB-SLAM3 with both the containers (simulation and wrapper) running parallely.
 
-### Potential issues you may face.
-The simulation and the wrapper both have their ```ROS_DOMAIN_ID``` set to 55 so they are meant to work out of the box. However, you may face issues if this environment variable is not set properly. Before you start the wrapper, run ```ros2 topic list``` and make sure the topics namespaced with ```robot_0``` are visible inside the ORB-SLAM3 container provided the simulation is running along the side.
+### Potential issues you may face
 
+The simulation and the wrapper both have their ```ROS_DOMAIN_ID``` set to 55 so they are meant to work out of the box. However, you may face issues if this environment variable is not set properly. Before you start the wrapper, run ```ros2 topic list``` and make sure the topics namespaced with ```robot_0``` are visible inside the ORB-SLAM3 container provided the simulation is running along the side.
 
 ## Important notes
 
@@ -92,6 +117,7 @@ Currently the ```rgbd.launch.py``` launch file defaults to ```orb_slam3_ros2_wra
 The very initial versions of this code were derived from [thien94/orb_slam3_ros_wrapper](https://github.com/thien94/orb_slam3_ros_wrapper) and [zang9/ORB_SLAM3_ROS2](https://github.com/zang09/ORB_SLAM3_ROS2)
 
 ## ROS Parameter descriptions
+
 | Parameter Name          | Default Value | Description                                                                 |
 |-------------------------|---------------|-----------------------------------------------------------------------------|
 | `robot_base_frame`      | `base_footprint` | The name of the frame attached to the robot's base. |
