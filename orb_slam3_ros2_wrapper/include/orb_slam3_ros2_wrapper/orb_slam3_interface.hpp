@@ -78,6 +78,10 @@ namespace ORB_SLAM3_Wrapper
 
         void getCurrentMapPoints(sensor_msgs::msg::PointCloud2 &mapPointCloud);
 
+        void mapPointsVisibleFromPose(geometry_msgs::msg::Pose cameraPose, std::vector<ORB_SLAM3::MapPoint*>& points, int maxLandmarks, float maxDistance, float maxAngle);
+
+        void mapPointsVisibleFromPose(Sophus::SE3f& cameraPose, std::vector<ORB_SLAM3::MapPoint*>& points, int maxLandmarks, float maxDistance, float maxAngle);
+
         void handleIMU(const sensor_msgs::msg::Imu::SharedPtr msgIMU);
 
         bool trackRGBDi(const sensor_msgs::msg::Image::SharedPtr msgRGB, const sensor_msgs::msg::Image::SharedPtr msgD, Sophus::SE3f &Tcw);
@@ -85,6 +89,11 @@ namespace ORB_SLAM3_Wrapper
         bool trackRGBD(const sensor_msgs::msg::Image::SharedPtr msgRGB, const sensor_msgs::msg::Image::SharedPtr msgD, Sophus::SE3f &Tcw);
         
         bool trackMONO(const sensor_msgs::msg::Image::SharedPtr msgRGB, Sophus::SE3f &Tcw);
+
+        std::shared_ptr<WrapperTypeConversions> getTypeConversionPtr()
+        {
+            return typeConversions_;
+        };
 
     private:
         std::shared_ptr<ORB_SLAM3::System> mSLAM_;

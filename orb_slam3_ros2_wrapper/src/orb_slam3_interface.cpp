@@ -32,6 +32,7 @@ namespace ORB_SLAM3_Wrapper
         mSLAM_ = std::make_shared<ORB_SLAM3::System>(strVocFile_, strSettingsFile_, sensor_, bUseViewer_);
         typeConversions_ = std::make_shared<WrapperTypeConversions>();
         std::cout << "Interface constructor complete" << endl;
+        std::cout << "Robot X: " << robotX_ << " Robot Y: " << robotY_ << std::endl;
     }
 
     ORBSLAM3Interface::~ORBSLAM3Interface()
@@ -76,6 +77,19 @@ namespace ORB_SLAM3_Wrapper
         // sort the map array in init kf id order.
         std::sort(mapsList.begin(), mapsList.end(), compareInitKFid());
         allKFs_ = makeKFIdPair(mapsList);
+        std::vector<ORB_SLAM3::Map *> mapsList2 = orbAtlas_->GetAllMaps();
+        // std::cout << "Current map id: " << orbAtlas_->GetCurrentMap()->GetId() << std::endl;
+        // for (auto mp : mapsList2)
+        // {
+        //     if (mp != nullptr && mp->GetOriginKF() != nullptr)
+        //     {
+        //         std::cout << "Map id: " << mp->GetId() << std::endl;
+        //         std::cout << "Map init id: " << mp->GetInitKFid() << std::endl;
+        //         std::cout << "Map origin kf id: " << mp->GetOriginKF()->mnId << std::endl;
+        //         std::cout << "Map max kf id: " << mp->GetMaxKFid() << std::endl;
+        //         std::cout << "================" << std::endl;
+        //     }
+        // }
         // std::cout << "+++++++++++++++++++++++++++++++++" << std::endl;
         for (size_t c = 0; c < mapsList.size(); c++)
         {
@@ -90,20 +104,27 @@ namespace ORB_SLAM3_Wrapper
             }
             else
             {
-                if (static_cast<int64_t>(mapsList[c]->GetInitKFid()) - 1 < 0)
+                bool parentMapFound = false;
+                int parentMapID = mapsList[c]->GetInitKFid() - 1;
+                while (!parentMapFound)
                 {
-                    throw std::runtime_error("The init KF id - 1 is lesser than 0. This should not happen");
+                    if (parentMapID < 0)
+                    {
+                        throw std::runtime_error("The init KF id - 1 is lesser than 0. This should not happen");
+                    }
+                    if (allKFs_.count(parentMapID) > 0)
+                    {
+                        parentMapFound = true;
+                        break;
+                    }
+                    parentMapID -= 1;
                 }
-                else if (allKFs_.count(mapsList[c]->GetInitKFid() - 1) == 0)
-                {
-                    throw std::runtime_error("The KF was not found in allKFs_. This should not happen");
-                }
-                else if (mapReferencePoses_.count(allKFs_[mapsList[c]->GetInitKFid() - 1]->GetMap()) == 0)
+                if (mapReferencePoses_.count(allKFs_[parentMapID]->GetMap()) == 0)
                 {
                     throw std::runtime_error("The parent map pose for this map ID does not exist. This should not happen.");
                 }
-                auto parentMapORBPose = allKFs_[mapsList[c]->GetInitKFid() - 1]->GetPose();
-                mapReferencePoses_[mapsList[c]] = typeConversions_->transformPoseWithReference<Eigen::Affine3d>(mapReferencePoses_[allKFs_[mapsList[c]->GetInitKFid() - 1]->GetMap()], parentMapORBPose);
+                auto parentMapORBPose = allKFs_[parentMapID]->GetPose();
+                mapReferencePoses_[mapsList[c]] = typeConversions_->transformPoseWithReference<Eigen::Affine3d>(mapReferencePoses_[allKFs_[parentMapID]->GetMap()], parentMapORBPose);
             }
         }
         // std::cout << "+++++++++++++++++++++++++++++++++" << std::endl;
@@ -119,12 +140,13 @@ namespace ORB_SLAM3_Wrapper
         for (auto& KF : atlasAllKFs_)
         {
             for (auto& mapPoint : KF->GetMapPoints())
+
             {
                 if (!mapPoint->isBad())
                 {
                     auto worldPos = typeConversions_->vector3fORBToROS(mapPoint->GetWorldPos());
                     mapReferencesMutex_.lock();
-                    if(allKFs_.count(KF->mnId) == 0)
+                    if (allKFs_.count(KF->mnId) == 0)
                     {
                         mapReferencesMutex_.unlock();
                         continue;
@@ -136,6 +158,134 @@ namespace ORB_SLAM3_Wrapper
             }
         }
         mapPointCloud = typeConversions_->MapPointsToPCL(trackedMapPoints);
+    }
+
+    void ORBSLAM3Interface::mapPointsVisibleFromPose(geometry_msgs::msg::Pose cameraPose, std::vector<ORB_SLAM3::MapPoint*>& points, int maxLandmarks, float maxDistance, float maxAngle)
+    {
+        auto camPose = typeConversions_->se3ROSToORB(typeConversions_->poseToAffine(cameraPose));
+        mapPointsVisibleFromPose(camPose, points, maxLandmarks, maxDistance, maxAngle);
+    }
+
+    void ORBSLAM3Interface::mapPointsVisibleFromPose(Sophus::SE3f& cameraPose, std::vector<ORB_SLAM3::MapPoint*>& points, int maxLandmarks, float maxDistance, float maxAngle)
+    {
+        auto Tcw = cameraPose;
+        auto Twc = Tcw.inverse();
+
+        std::cout << "Input camera pose: " << std::endl; 
+        auto eulerAngles = typeConversions_->rotationORBToEulerROS(Twc.rotationMatrix());
+        std::cout << "Translation:" << Twc.translation().transpose() << std::endl;
+        std::cout << "Roll ROS coord: " << eulerAngles(0) << std::endl;
+        std::cout << "Pitch ROS coord: " << eulerAngles(1) << std::endl;
+        std::cout << "Yaw ROS coord: " << eulerAngles(2) << std::endl;
+        std::cout << "===" << std::endl;
+
+        auto mRwc = Twc.rotationMatrix();
+        auto mOw = Twc.translation();
+
+        auto mRcw = Tcw.rotationMatrix();
+        auto mtcw = Tcw.translation();
+        if(orbAtlas_->GetAllCameras().size() > 1)
+        {
+            throw std::runtime_error("The number of cameras is greater than 1. This will be catered later. You cannot check if a map point is visible within a keyframe in this version. Check if there have been version updates.");
+        }
+        auto pCameraModel = orbAtlas_->GetAllCameras()[0];
+
+        float mnMinX = 0.0f;
+        float mnMaxX = 640.0f;
+        float mnMinY = 0.0f;
+        float mnMaxY = 480.0f;
+        int numVisibleMapPoints = 0;
+        int numKFsChecked = 0;
+
+        auto mapKFs_ = orbAtlas_->GetCurrentMap()->GetAllKeyFrames();
+
+        std::unordered_set<ORB_SLAM3::MapPoint*> processedMapPoints;
+        for(auto pKFMp : mapKFs_)
+        {
+            auto rel_T_CamToKF = Tcw * pKFMp->GetPoseInverse();
+            auto relEulerAngles = typeConversions_->rotationORBToEulerROS(rel_T_CamToKF.rotationMatrix());
+            float distBwKfs = rel_T_CamToKF.translation().norm();
+
+            // checks ......
+            // continue if the distance is too large
+            if(distBwKfs >= maxDistance * 2.0)
+            {
+                continue;
+            }
+            if(distBwKfs > maxDistance)
+            {
+                // if distance is large but in range, check if behind. If behind, continue.
+                if(rel_T_CamToKF.translation()[2] < 0.0)
+                {
+                    continue;
+                }
+                else if(rel_T_CamToKF.translation()[2] > 0.0)
+                {
+                    if((relEulerAngles(2) >= 0 && relEulerAngles(2) < M_PI / 2.0) || (relEulerAngles(2) > 3.0 * M_PI / 2.0 && relEulerAngles(2) < 2 * M_PI))
+                    {
+                        continue;
+                    }
+                }
+            }
+            if(distBwKfs <= maxDistance)
+            {
+                // if distance is small but in range, check if behind. If behind, check angles.
+                if(rel_T_CamToKF.translation()[2] < 0.0)
+                {
+                    if((relEulerAngles(2) >= 2.0944 && relEulerAngles(2) < 4.18879))
+                    {
+                        continue;
+                    }
+                }
+            }
+            numKFsChecked++;
+            if(numVisibleMapPoints > maxLandmarks)
+                break;
+            auto currentKFMp = pKFMp->GetMapPoints();
+            for (auto pMP : currentKFMp)
+            {
+                if (processedMapPoints.find(pMP) != processedMapPoints.end())
+                    continue;
+                processedMapPoints.insert(pMP);
+                // 3D in absolute coordinates
+                Eigen::Matrix<float,3,1> P = pMP->GetWorldPos();
+
+                // 3D in camera coordinates
+                const Eigen::Matrix<float,3,1> Pc = mRcw * P + mtcw;
+
+                // Check positive depth
+                const float &PcZ = Pc(2);
+                if(PcZ<0.0f)
+                    continue;
+
+                const Eigen::Vector2f uv = pCameraModel->project(Pc);
+
+                if(uv(0)<mnMinX || uv(0)>mnMaxX)
+                    continue;
+                if(uv(1)<mnMinY || uv(1)>mnMaxY)
+                    continue;
+
+                // Check distance is in the scale invariance region of the MapPoint
+                const float maxDistance = pMP->GetMaxDistanceInvariance();
+                const float minDistance = pMP->GetMinDistanceInvariance();
+                const Eigen::Vector3f PO = P - mOw;
+                const float dist = PO.norm();
+
+                if(dist<minDistance || dist>maxDistance)
+                    continue;
+                points.push_back(pMP);
+                numVisibleMapPoints++;
+            }
+        }
+        /**
+        Added the stuff below just to see prints if the num kfs become 0. */
+        std::cout << "******" << std::endl;
+        std::cout << "Number of visible map points: " << numVisibleMapPoints << std::endl;
+        std::cout << "Number of keyframes checked: " << numKFsChecked << std::endl;
+        
+        // Print the input camera pose translation and rotation
+        // std::cout << "Input camera pose translation: " << mOw.transpose() << std::endl;
+        // std::cout << "Input camera pose rotation:\n" << mRwc << std::endl;
     }
 
     void ORBSLAM3Interface::mapDataToMsg(slam_msgs::msg::MapData &mapDataMsg, bool currentMapKFOnly, bool includeMapPoints, std::vector<int> kFIDforMapPoints)
@@ -405,6 +555,9 @@ namespace ORB_SLAM3_Wrapper
         {
             calculateReferencePoses();
             correctTrackedPose(Tcw);
+            std::vector<ORB_SLAM3::MapPoint *> tempMapPoints;
+            auto tempTwc = Tcw.inverse();
+            // mapPointsVisibleFromPose(tempTwc, tempMapPoints, 1000, 5.0, 2.0);
             hasTracked_ = true;
             return true;
         }

@@ -17,3 +17,11 @@ container_root/.cmake
 showgit.py
 !colcon_ws/.vscode
 orb_slam3_ros2_wrapper/config
+**rosbag**
+**hotspot**
+container_root/Normal.bag
+container_root/Simple.bag
+container_root/Normal_ROS2_bag/**
+container_root/Simple_ROS2_bag/**
+container_root/hotspot/**
+container_root/.debug
