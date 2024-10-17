@@ -61,6 +61,20 @@ ament_target_dependencies(rgbd rclcpp sensor_msgs cv_bridge message_filters ORB_
 target_link_libraries(rgbd ${PCL_LIBRARIES})
 install(TARGETS rgbd
   DESTINATION lib/${PROJECT_NAME})
+  
+add_executable(mono
+  src/type_conversion.cpp
+  src/orb_slam3_interface.cpp
+  src/mono/mono-slam-node.cpp
+  src/mono/mono.cpp
+)
+ament_target_dependencies(mono rclcpp sensor_msgs cv_bridge message_filters ORB_SLAM3 Pangolin tf2_ros tf2_eigen slam_msgs pcl_ros pcl_conversions PCL nav_msgs)
+
+ament_target_dependencies(mono rclcpp sensor_msgs cv_bridge message_filters ORB_SLAM3 Pangolin tf2_ros tf2_eigen slam_msgs pcl_ros pcl_conversions PCL nav_msgs)
+
+target_link_libraries(mono ${PCL_LIBRARIES})
+install(TARGETS mono
+  DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY launch params
 DESTINATION share/${PROJECT_NAME}
