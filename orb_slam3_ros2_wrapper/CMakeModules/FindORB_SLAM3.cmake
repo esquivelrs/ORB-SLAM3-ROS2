@@ -5,8 +5,8 @@
 #
 # To help the search ORB_SLAM3_ROOT_DIR environment variable as the path to ORB_SLAM3 root folder
 #  e.g. `set( ORB_SLAM3_ROOT_DIR=~/ORB_SLAM3) `
-# set(ORB_SLAM3_ROOT_DIR "/home/orb/ORB_SLAM3")
-set(ORB_SLAM3_ROOT_DIR "/home/ros/ws/4dradar_camera_ws/src/general/ORB-SLAM3-ROS2/ORB_SLAM3")
+set(ORB_SLAM3_ROOT_DIR "/home/orb/ORB_SLAM3")
+# set(ORB_SLAM3_ROOT_DIR "/home/ros/ws/4dradar_camera_ws/src/general/ORB-SLAM3-ROS2/ORB_SLAM3")
 
 # message(${ORB_SLAM3_ROOT_DIR})
 # message(${ORB_SLAM3_ROOT_DIR}/include)
