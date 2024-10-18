@@ -59,4 +59,5 @@ COPY ORB_SLAM3 /home/orb/ORB_SLAM3
 RUN . /opt/ros/humble/setup.sh && cd /home/orb/ORB_SLAM3 && mkdir -p build && ./build.sh
 COPY orb_slam3_ros2_wrapper /root/colcon_ws/src/orb_slam3_ros2_wrapper
 COPY slam_msgs /root/colcon_ws/src/slam_msgs
+RUN . /opt/ros/humble/setup.sh && cd /home/orb/ORB_SLAM3/Thirdparty/Sophus && mkdir -p build && cd build && make install
 RUN . /opt/ros/humble/setup.sh && cd /root/colcon_ws/ && colcon build --symlink-install

@@ -498,3 +498,22 @@ ls
 tmux
 ls
 ros2 launch orb_slam3_ros2_wrapper unirobot.launch.py 
+cd /home/orb/ORB_SLAM3/Thirdparty/Sophus/build
+make install
+ls
+exit
+ls
+cd /home/orb/ORB_SLAM3/Thirdparty/Sophus
+mkdir build
+ls
+cd build/
+make install
+exit
+cd /root/colcon_ws/
+ls
+colcon build --symlink-install
+source install/setup.bash
+ros2 launch orb_slam3_ros2_wrapper unirobot.launch.py
+exit
+ros2 launch orb_slam3_ros2_wrapper unirobot.launch.py
+exit
